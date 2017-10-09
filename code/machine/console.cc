@@ -172,3 +172,13 @@ ConsoleOutput::PutChar(char ch)
     kernel->interrupt->Schedule(this, ConsoleTime, ConsoleWriteInt);
 }
 
+void
+ConsoleOutput::PutInt(int number)
+{
+    ASSERT(putBusy == FALSE);
+    char out[12];
+    sprintf(out, "%d\n", number);
+    WriteFile(writeFileNo, out, strlen(out) * sizeof(char));
+    putBusy = TRUE;
+    kernel->interrupt->Schedule(this, ConsoleTime, ConsoleWriteInt);
+}

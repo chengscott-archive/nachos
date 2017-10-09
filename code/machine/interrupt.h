@@ -93,7 +93,6 @@ class Interrupt {
 				// next interrupt
 
     void Halt(); 		// quit and print out stats
-
     void PrintInt(int number);
 	int CreateFile(char *filename);
  

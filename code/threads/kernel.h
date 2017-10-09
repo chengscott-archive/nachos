@@ -43,7 +43,8 @@ class Kernel {
     void ConsoleTest();         // interactive console self test
     void NetworkTest();         // interactive 2-machine network test
 	Thread* getThread(int threadID){return t[threadID];}    
-	
+
+    void Print(int number);
 	int CreateFile(char* filename); // fileSystem call
 
 // These are public for notational convenience; really, 
