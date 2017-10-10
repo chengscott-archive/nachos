@@ -313,4 +313,25 @@ int Kernel::CreateFile(char *filename)
 	return fileSystem->Create(filename);
 }
 
+OpenFileId Kernel::OpenFile(char* filename)
+{
+    return fileSystem->OpenGetId(filename);
+}
+
+int Kernel::WriteFile(char *buffer, int size, OpenFileId id)
+{
+    return fileSystem->fileDescriptorTable[id]->Write(buffer, size);
+}
+
+int Kernel::ReadFile(char *buffer, int size, OpenFileId id)
+{
+    return fileSystem->fileDescriptorTable[id]->Read(buffer, size);
+}
+
+int Kernel::CloseFile(OpenFileId id)
+{
+    if (id < 0 || id >= 20 || fileSystem->fileDescriptorTable[id] == NULL) return 0;
+    delete fileSystem->fileDescriptorTable[id];
+    return 1;
+}
 

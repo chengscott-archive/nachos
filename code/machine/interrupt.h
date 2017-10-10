@@ -37,6 +37,9 @@
 #include "list.h"
 #include "callback.h"
 
+/* A unique identifier for an open Nachos file. */
+typedef int OpenFileId;
+
 // Interrupts can be disabled (IntOff) or enabled (IntOn)
 enum IntStatus { IntOff, IntOn };
 
@@ -95,6 +98,10 @@ class Interrupt {
     void Halt(); 		// quit and print out stats
     void PrintInt(int number);
 	int CreateFile(char *filename);
+	OpenFileId OpenFile(char *filename);
+    int WriteFile(char *buffer, int size, OpenFileId id);
+    int ReadFile(char *buffer, int size, OpenFileId id);
+    int CloseFile(OpenFileId id);
  
     void YieldOnReturn();	// cause a context switch on return 
 				// from an interrupt handler

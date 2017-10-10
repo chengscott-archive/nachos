@@ -40,6 +40,10 @@
 #ifdef FILESYS_STUB 		// Temporarily implement file system calls as 
 				// calls to UNIX, until the real file system
 				// implementation is available
+
+/* A unique identifier for an open Nachos file. */
+typedef int OpenFileId;
+
 class FileSystem {
   public:
     FileSystem() { for (int i = 0; i < 20; i++) fileDescriptorTable[i] = NULL; }
@@ -58,6 +62,14 @@ class FileSystem {
 	  if (fileDescriptor == -1) return NULL;
 	  return new OpenFile(fileDescriptor);
       }
+
+    OpenFileId OpenGetId(char *name) {
+	  int fileDescriptor = OpenForReadWrite(name, FALSE);
+	  if (fileDescriptor != -1)
+          fileDescriptorTable[fileDescriptor] = new OpenFile(fileDescriptor);
+      else fileDescriptorTable[fileDescriptor] = NULL;
+      return fileDescriptor;
+    }
 
     bool Remove(char *name) { return Unlink(name) == 0; }
 
