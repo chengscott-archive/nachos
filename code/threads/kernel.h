@@ -36,6 +36,10 @@ class Kernel {
     void Initialize(); 		// initialize the kernel -- separated
 				// from constructor because 
 				// refers to "kernel" as a global
+
+	// 2015.11.25 added
+	void PrepareToEnd(); // called before all running programs end
+
 	void ExecAll();
 	int Exec(char* name);
     void ThreadSelfTest();	// self test of threads and synchronization
@@ -44,12 +48,14 @@ class Kernel {
     void NetworkTest();         // interactive 2-machine network test
 	Thread* getThread(int threadID){return t[threadID];}    
 
-    void Print(int number);
+	#ifdef FILESYS_STUB
 	int CreateFile(char* filename); // fileSystem call
-	OpenFileId OpenFile(char *filename);
-    int WriteFile(char *buffer, int size, OpenFileId id);
-    int ReadFile(char *buffer, int size, OpenFileId id);
-    int CloseFile(OpenFileId id);
+	#endif
+    int CreateFile(char *, int);
+    OpenFileId OpenFileName(char *);
+    int WriteFile(char *, int, OpenFileId);
+    int ReadFile(char *, int, OpenFileId);
+    int CloseFile(OpenFileId);
 
 // These are public for notational convenience; really, 
 // they're global variables used everywhere.
@@ -73,7 +79,6 @@ class Kernel {
 
 	Thread* t[10];
 	char*   execfile[10];
-    int priority_[10];
 	int execfileNum;
 	int threadNum;
     bool randomSlice;		// enable pseudo-random time slicing

@@ -40,7 +40,7 @@
 #
 #    Nachos assumes that the location of the program startup routine (the
 # 	location the kernel jumps to when the program initially starts up)
-#       is at location 0.  This means: start.o must be the first .o passed
+#       is at location 0.  This means: start.o must be the first .o passed 
 # 	to ld, in order for the routine "Start" to be loaded at location 0
 #
 #    When you make the test programs, you will see messages like these:
@@ -113,7 +113,8 @@ PROGRAMS = unknownhost
 else
 # change this if you create a new test program!
 #PROGRAMS = add halt shell matmult sort segments test1 test2 a
-PROGRAMS = add halt consoleIO_test1 consoleIO_test2 fileIO_test1 fileIO_test2 test1
+#PROGRAMS = add halt consoleIO_test1 consoleIO_test2 fileIO_test1 fileIO_test2
+PROGRAMS = FS_test1 FS_test2
 endif
 
 all: $(PROGRAMS)
@@ -126,12 +127,6 @@ halt.o: halt.c
 halt: halt.o start.o
 	$(LD) $(LDFLAGS) start.o halt.o -o halt.coff
 	$(COFF2NOFF) halt.coff halt
-
-test1.o: test1.c
-		$(CC) $(CFLAGS) -c test1.c
-test1: test1.o start.o
-		$(LD) $(LDFLAGS) start.o test1.o -o test1.coff
-		$(COFF2NOFF) test1.coff test1
 
 add.o: add.c
 	$(CC) $(CFLAGS) -c add.c
@@ -164,24 +159,6 @@ matmult: matmult.o start.o
 	$(LD) $(LDFLAGS) start.o matmult.o -o matmult.coff
 	$(COFF2NOFF) matmult.coff matmult
 
-p1.o: p1.c
-	$(CC) $(CFLAGS) -c p1.c
-p1: p1.o start.o
-	$(LD) $(LDFLAGS) start.o p1.o -o p1.coff
-	$(COFF2NOFF) p1.coff p1
-
-p2.o: p2.c
-	$(CC) $(CFLAGS) -c p2.c
-p2: p2.o start.o
-	$(LD) $(LDFLAGS) start.o p2.o -o p2.coff
-	$(COFF2NOFF) p2.coff p2
-
-p3.o: p3.c
-	$(CC) $(CFLAGS) -c p3.c
-p3: p3.o start.o
-	$(LD) $(LDFLAGS) start.o p3.o -o p3.coff
-	$(COFF2NOFF) p3.coff p3
-
 consoleIO_test1.o: consoleIO_test1.c
 	$(CC) $(CFLAGS) -c consoleIO_test1.c
 consoleIO_test1: consoleIO_test1.o start.o
@@ -205,6 +182,18 @@ fileIO_test2.o: fileIO_test2.c
 fileIO_test2: fileIO_test2.o start.o
 	$(LD) $(LDFLAGS) start.o fileIO_test2.o -o fileIO_test2.coff
 	$(COFF2NOFF) fileIO_test2.coff fileIO_test2
+
+FS_test1.o: FS_test1.c
+	$(CC) $(CFLAGS) -c FS_test1.c
+FS_test1: FS_test1.o start.o
+	$(LD) $(LDFLAGS) start.o FS_test1.o -o FS_test1.coff
+	$(COFF2NOFF) FS_test1.coff FS_test1
+
+FS_test2.o: FS_test2.c
+	$(CC) $(CFLAGS) -c FS_test2.c
+FS_test2: FS_test2.o start.o
+	$(LD) $(LDFLAGS) start.o FS_test2.o -o FS_test2.coff
+	$(COFF2NOFF) FS_test2.coff FS_test2
 
 
 

@@ -31,7 +31,7 @@
 
 class DirectoryEntry {
   public:
-    bool inUse;				// Is this directory entry in use?
+    bool inUse, isDir;				// Is this directory entry in use?
     int sector;				// Location on disk to find the 
 					//   FileHeader for this file 
     char name[FileNameMaxLen + 1];	// Text name for file, with +1 for 
@@ -61,17 +61,32 @@ class Directory {
     int Find(char *name);		// Find the sector number of the 
 					// FileHeader for file: "name"
 
-    bool Add(char *name, int newSector);  // Add a file name into the directory
+    bool Add(char *name, int newSector, bool isDir);  // Add a file name into the directory
 
     bool Remove(char *name);		// Remove a file from the directory
 
+    bool RecursiveRemove(char *);
+
     void List();			// Print the names of all the files
 					//  in the directory
+
+    void RecursiveList(int depth = 0);
+
     void Print();			// Verbose print of the contents
 					//  of the directory -- all the file
 					//  names and their contents.
 
+    bool isDirectory(char *);
+
   private:
+
+	/*
+		MP4 Hint:
+		Directory is actually a "file", be careful of how it works with OpenFile and FileHdr.
+		Disk part: table
+		In-core part: tableSize
+	*/
+
     int tableSize;			// Number of directory entries
     DirectoryEntry *table;		// Table of pairs: 
 					// <file name, file header location> 

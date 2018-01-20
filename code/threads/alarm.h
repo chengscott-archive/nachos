@@ -32,6 +32,8 @@ class Alarm : public CallBackObj {
     void WaitUntil(int x);	// suspend execution until time > now + x
                                 // this method is not yet implemented
 
+	void Disable() { timer->Disable(); } //2015.11.25
+
   private:
     Timer *timer;		// the hardware timer device
 

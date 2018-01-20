@@ -46,10 +46,6 @@ Thread::Thread(char* threadName, int threadID)
 					// of machine registers
     }
     space = NULL;
-    priority_ = 0;
-    burstStart_ = 0;
-    burstTime_ = 0;
-    waitTime_ = 0;
 }
 
 //----------------------------------------------------------------------
@@ -252,6 +248,7 @@ Thread::Sleep (bool finishing)
     status = BLOCKED;
 	//cout << "debug Thread::Sleep " << name << "wait for Idle\n";
     while ((nextThread = kernel->scheduler->FindNextToRun()) == NULL) {
+		kernel->PrepareToEnd();
 		kernel->interrupt->Idle();	// no one to run, wait for an interrupt
 	}    
     // returns when it's time for us to run

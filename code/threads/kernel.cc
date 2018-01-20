@@ -36,6 +36,10 @@ Kernel::Kernel(int argc, char **argv)
     reliability = 1;            // network reliability, default is 1.0
     hostName = 0;               // machine id, also UNIX socket name
                                 // 0 is the default machine id
+
+	// MP4 mod tag
+	execfileNum = 0; // dummy operation to keep valgrind happy
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-rs") == 0) {
  	    	ASSERT(i + 1 < argc);
@@ -48,9 +52,6 @@ Kernel::Kernel(int argc, char **argv)
 		} else if (strcmp(argv[i], "-e") == 0) {
         	execfile[++execfileNum]= argv[++i];
 			cout << execfile[execfileNum] << "\n";
-        } else if (strcmp(argv[i], "-ep") == 0) {
-            execfile[++execfileNum] = argv[++i];
-            priority_[execfileNum] = atoi(argv[++i]);
 		} else if (strcmp(argv[i], "-ci") == 0) {
 	    	ASSERT(i + 1 < argc);
 	    	consoleIn = argv[i + 1];
@@ -114,10 +115,28 @@ Kernel::Initialize()
 #else
     fileSystem = new FileSystem(formatFlag);
 #endif // FILESYS_STUB
-    //postOfficeIn = new PostOfficeInput(10);
+
+	// MP4 mod tag
+    /*
+	postOfficeIn = new PostOfficeInput(10);
     postOfficeOut = new PostOfficeOutput(reliability);
+	*/
 
     interrupt->Enable();
+}
+
+//----------------------------------------------------------------------
+//	MP4 mod tag
+//	Kernel::PrepareToEnd
+// 	Since Nachos does not disable Timer, Console after all threads complete,
+//	which will result in generating infinite interrupts. We manually disable timer,
+//	console, etc. after all threads complete.
+//----------------------------------------------------------------------
+void
+Kernel::PrepareToEnd()
+{
+	alarm->Disable();
+	synchConsoleIn->Disable();
 }
 
 //----------------------------------------------------------------------
@@ -136,9 +155,13 @@ Kernel::~Kernel()
     delete synchConsoleOut;
     delete synchDisk;
     delete fileSystem;
+
+	// Mp4 mod tag
+	/*
     delete postOfficeIn;
     delete postOfficeOut;
-    
+    */
+
     Exit(0);
 }
 
@@ -274,9 +297,8 @@ void Kernel::ExecAll()
 int Kernel::Exec(char* name)
 {
 	t[threadNum] = new Thread(name, threadNum);
-    t[threadNum]->setPriority(priority_[threadNum]);
 	t[threadNum]->space = new AddrSpace();
-	t[threadNum]->Fork((VoidFunctionPtr) &ForkExecute, (void *)t[threadNum]);//forkexecute 251行
+	t[threadNum]->Fork((VoidFunctionPtr) &ForkExecute, (void *)t[threadNum]);
 	threadNum++;
 
 	return threadNum-1;
@@ -307,37 +329,39 @@ int Kernel::Exec(char* name)
 //  cout << "after ThreadedKernel:Run();" << endl;  // unreachable
 }
 
-void Kernel::Print(int number)
-{
-    synchConsoleOut->PutInt(number);
-}
-
+#ifdef FILESYS_STUB
 int Kernel::CreateFile(char *filename)
 {
 	return fileSystem->Create(filename);
 }
+#endif
 
-OpenFileId Kernel::OpenFile(char* filename)
+int
+Kernel::CreateFile(char *filename, int size)
 {
-    return fileSystem->OpenGetId(filename);
+    return fileSystem->Create(filename, size);
 }
 
-int Kernel::WriteFile(char *buffer, int size, OpenFileId id)
+OpenFileId
+Kernel::OpenFileName(char *filename)
 {
-    if (id < 0 || id >= 20 || fileSystem->fileDescriptorTable[id] == NULL) return -1;
-    return fileSystem->fileDescriptorTable[id]->Write(buffer, size);
+    return fileSystem->OpenFileName(filename);
 }
 
-int Kernel::ReadFile(char *buffer, int size, OpenFileId id)
+int
+Kernel::WriteFile(char *buffer, int size, OpenFileId id)
 {
-    if (id < 0 || id >= 20 || fileSystem->fileDescriptorTable[id] == NULL) return -1;
-    return fileSystem->fileDescriptorTable[id]->Read(buffer, size);
+    return fileSystem->WriteFile(buffer, size, id);
 }
 
-int Kernel::CloseFile(OpenFileId id)
+int
+Kernel::ReadFile(char *buffer, int size, OpenFileId id)
 {
-    if (id < 0 || id >= 20 || fileSystem->fileDescriptorTable[id] == NULL) return 0;
-    delete fileSystem->fileDescriptorTable[id];
-    return 1;
+    return fileSystem->ReadFile(buffer, size, id);
 }
 
+int
+Kernel::CloseFile(OpenFileId id)
+{
+    return fileSystem->CloseFile(id);
+}

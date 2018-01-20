@@ -40,10 +40,6 @@
 #ifdef FILESYS_STUB 		// Temporarily implement file system calls as 
 				// calls to UNIX, until the real file system
 				// implementation is available
-
-/* A unique identifier for an open Nachos file. */
-typedef int OpenFileId;
-
 class FileSystem {
   public:
     FileSystem() { for (int i = 0; i < 20; i++) fileDescriptorTable[i] = NULL; }
@@ -63,14 +59,6 @@ class FileSystem {
 	  return new OpenFile(fileDescriptor);
       }
 
-    OpenFileId OpenGetId(char *name) {
-	  int fileDescriptor = OpenForReadWrite(name, FALSE);
-	  if (fileDescriptor != -1)
-          fileDescriptorTable[fileDescriptor] = new OpenFile(fileDescriptor);
-      else fileDescriptorTable[fileDescriptor] = NULL;
-      return fileDescriptor;
-    }
-
     bool Remove(char *name) { return Unlink(name) == 0; }
 
 	OpenFile *fileDescriptorTable[20];
@@ -78,6 +66,7 @@ class FileSystem {
 };
 
 #else // FILESYS
+typedef int OpenFileId;
 class FileSystem {
   public:
     FileSystem(bool format);		// Initialize the file system.
@@ -86,23 +75,38 @@ class FileSystem {
     					// If "format", there is nothing on
 					// the disk, so initialize the directory
     					// and the bitmap of free blocks.
+	// MP4 mod tag
+	~FileSystem();
 
     bool Create(char *name, int initialSize);  	
 					// Create a file (UNIX creat)
+
+    void CreateDirectory(char *);
 
     OpenFile* Open(char *name); 	// Open a file (UNIX open)
 
     bool Remove(char *name);  		// Delete a file (UNIX unlink)
 
-    void List();			// List all the files in the file system
+    bool RecursiveRemove(char *);
+
+    void List(char *);			// List all the files in the file system
+
+    void RecursiveList(char *);
 
     void Print();			// List all the files and their contents
 
+    OpenFileId OpenFileName(char *);
+    int WriteFile(char *, int, OpenFileId);
+    int ReadFile(char *, int, OpenFileId);
+    int CloseFile(OpenFileId);
+
   private:
+    OpenFile *findFileDirectory(char *);
    OpenFile* freeMapFile;		// Bit map of free disk blocks,
 					// represented as a file
    OpenFile* directoryFile;		// "Root" directory -- list of 
 					// file names, represented as a file
+    OpenFile *fileDescriptorTable[32];
 };
 
 #endif // FILESYS

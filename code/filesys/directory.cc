@@ -37,9 +37,15 @@
 Directory::Directory(int size)
 {
     table = new DirectoryEntry[size];
+
+	// MP4 mod tag
+	memset(table, 0, sizeof(DirectoryEntry) * size);  // dummy operation to keep valgrind happy
+
     tableSize = size;
-    for (int i = 0; i < tableSize; i++)
-	table[i].inUse = FALSE;
+    for (int i = 0; i < tableSize; i++) {
+        table[i].inUse = FALSE;
+        table[i].isDir = false;
+    }
 }
 
 //----------------------------------------------------------------------
@@ -114,6 +120,15 @@ Directory::Find(char *name)
     return -1;
 }
 
+bool
+Directory::isDirectory(char *name)
+{
+    int i = FindIndex(name);
+
+    if (i != -1)
+        return table[i].isDir;
+    return false;
+}
 //----------------------------------------------------------------------
 // Directory::Add
 // 	Add a file into the directory.  Return TRUE if successful;
@@ -126,7 +141,7 @@ Directory::Find(char *name)
 //----------------------------------------------------------------------
 
 bool
-Directory::Add(char *name, int newSector)
+Directory::Add(char *name, int newSector, bool isDir)
 { 
     if (FindIndex(name) != -1)
 	return FALSE;
@@ -134,6 +149,7 @@ Directory::Add(char *name, int newSector)
     for (int i = 0; i < tableSize; i++)
         if (!table[i].inUse) {
             table[i].inUse = TRUE;
+            table[i].isDir = isDir;
             strncpy(table[i].name, name, FileNameMaxLen); 
             table[i].sector = newSector;
         return TRUE;
@@ -160,6 +176,29 @@ Directory::Remove(char *name)
     return TRUE;	
 }
 
+bool
+Directory::RecursiveRemove(char *name)
+{
+    int i = FindIndex(name);
+
+    if (i == -1)
+        return FALSE;
+    if (table[i].isDir) {
+        OpenFile *file = new OpenFile(table[i].sector);
+        Directory *dir = new Directory(64);
+        dir->FetchFrom(file);
+        for (int j = 0; j < 64; ++j) {
+            if (table[i].inUse) {
+                dir->RecursiveRemove(table[i].name);
+            }
+        }
+        delete file;
+        delete dir;
+    }
+    table[i].inUse = FALSE;
+    return TRUE;
+}
+
 //----------------------------------------------------------------------
 // Directory::List
 // 	List all the file names in the directory. 
@@ -169,8 +208,32 @@ void
 Directory::List()
 {
    for (int i = 0; i < tableSize; i++)
-	if (table[i].inUse)
-	    printf("%s\n", table[i].name);
+	if (table[i].inUse) {
+       if (table[i].isDir)
+	       printf("[%d] %s D\n", i, table[i].name);
+       else
+	       printf("[%d] %s F\n", i, table[i].name);
+    }
+}
+
+void
+Directory::RecursiveList(int depth)
+{
+    for (int i = 0; i < tableSize; ++i) {
+        if (table[i].inUse) {
+            for (int j = 0; j < depth; ++j) printf("\t");
+            if (table[i].isDir) {
+                printf("[%d] %s D\n", i, table[i].name);
+                Directory *dir = new Directory(64);
+                OpenFile *file = new OpenFile(Find(table[i].name));
+                dir->FetchFrom(file);
+                dir->RecursiveList(depth + 1);
+                delete file;
+                delete dir;
+            } else
+                printf("[%d] %s F\n", i, table[i].name);
+        }
+    }
 }
 
 //----------------------------------------------------------------------

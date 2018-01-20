@@ -36,7 +36,6 @@
 #define SC_ThreadJoin   15
 #define SC_Add		42
 #define SC_MSG		100
-#define SC_Print    16
 
 #ifndef IN_ASM
 
@@ -52,10 +51,7 @@
 
 /* Stop Nachos, and print out performance stats */
 void Halt();			
-
-/* Print an integer via console IO */
-void PrintInt(int);
-
+ 
 /*
  * Add the two operants and return the result
  */ 
@@ -118,7 +114,7 @@ typedef int OpenFileId;
 /* Create a Nachos file, with name "name" */
 /* Note: Create does not open the file.   */
 /* Return 1 on success, negative error code on failure */
-int Create(char *name);
+int Create(char *name, int size);
 
 /* Remove a Nachos file, with name "name" */
 int Remove(char *name);

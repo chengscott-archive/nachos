@@ -50,14 +50,6 @@ Halt:
 	j	$31
 	.end Halt
 
-	.globl PrintInt
-	.ent   PrintInt
-PrintInt:
-	addiu $2,$0,SC_Print
-	syscall
-	j	$31
-	.end PrintInt
-
 	.globl MSG
 	.ent   MSG
 MSG:

@@ -21,9 +21,6 @@
 #include "machine.h"
 #include "noff.h"
 
-
-static bool usedPhysPage[NumPhysPages] = {false};
-
 //----------------------------------------------------------------------
 // SwapHeader
 // 	Do little endian to big endian conversion on the bytes in the 
@@ -73,7 +70,7 @@ AddrSpace::AddrSpace()
     pageTable = new TranslationEntry[NumPhysPages];
     for (int i = 0; i < NumPhysPages; i++) {
 	pageTable[i].virtualPage = i;	// for now, virt page # = phys page #
-	//pageTable[i].physicalPage = i;
+	pageTable[i].physicalPage = i;
 	pageTable[i].valid = TRUE;
 	pageTable[i].use = FALSE;
 	pageTable[i].dirty = FALSE;
@@ -81,7 +78,7 @@ AddrSpace::AddrSpace()
     }
     
     // zero out the entire address space
-    //bzero(kernel->machine->mainMemory, MemorySize);
+    bzero(kernel->machine->mainMemory, MemorySize);
 }
 
 //----------------------------------------------------------------------
@@ -90,9 +87,7 @@ AddrSpace::AddrSpace()
 //----------------------------------------------------------------------
 
 AddrSpace::~AddrSpace()
-{  
-  for (int i = 0; i < numPages; ++i)
-		usedPhysPage[pageTable[i].physicalPage] = false;
+{
    delete pageTable;
 }
 
@@ -134,30 +129,12 @@ AddrSpace::Load(char *fileName)
 #else
 // how big is address space?
     size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
-			+ UserStackSize;	// we need to increase the size	
-					// to leave room for the stack
+			+ UserStackSize;	// we need to increase the size
+						// to leave room for the stack
 #endif
     numPages = divRoundUp(size, PageSize);
-    size = numPages * PageSize;    
+    size = numPages * PageSize;
 
-
-
-    //pageTable = new TranslationEntry[numPages];
-    for (int i = 0; i < numPages; ++i) {
-		for (int j = 0; j < NumPhysPages; ++j) {	
-			if (usedPhysPage[j] == false) {
-  	            usedPhysPage[j] = true;
-                pageTable[i].virtualPage = i;
-                pageTable[i].physicalPage = j;
-         		pageTable[i].valid = true;
-        		pageTable[i].use = false;
-        		pageTable[i].dirty = false;
-        		pageTable[i].readOnly = false;
-				break;
-			}
-		}
-	}
-    
     ASSERT(numPages <= NumPhysPages);		// check we're not trying
 						// to run anything too big --
 						// at least until we have
@@ -166,45 +143,28 @@ AddrSpace::Load(char *fileName)
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
 // then, copy in the code and data segments into memory
-
-    unsigned int virtAddr, phyAddr;
-    ExceptionType ex;
+// Note: this code assumes that virtual address = physical address
     if (noffH.code.size > 0) {
-        virtAddr = noffH.code.virtualAddr;
-        ex = Translate(virtAddr, &phyAddr, 1);
-        if (ex != NoException) {
-            return FALSE;
-        }
         DEBUG(dbgAddr, "Initializing code segment.");
 	DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
         executable->ReadAt(
-		&(kernel->machine->mainMemory[phyAddr]), 
+		&(kernel->machine->mainMemory[noffH.code.virtualAddr]), 
 			noffH.code.size, noffH.code.inFileAddr);
     }
     if (noffH.initData.size > 0) {
-        virtAddr = noffH.initData.virtualAddr;
-        ex = Translate(virtAddr, &phyAddr, 1);
-        if (ex != NoException) {
-            return FALSE;
-        }
         DEBUG(dbgAddr, "Initializing data segment.");
 	DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
         executable->ReadAt(
-		&(kernel->machine->mainMemory[phyAddr]),
+		&(kernel->machine->mainMemory[noffH.initData.virtualAddr]),
 			noffH.initData.size, noffH.initData.inFileAddr);
     }
 
 #ifdef RDATA
     if (noffH.readonlyData.size > 0) {
-        virtAddr = noffH.readonlyData.virtualAddr;
-        ex = Translate(virtAddr, &phyAddr, 0);
-        if (ex != NoException) {
-            return FALSE;
-        }
         DEBUG(dbgAddr, "Initializing read only data segment.");
 	DEBUG(dbgAddr, noffH.readonlyData.virtualAddr << ", " << noffH.readonlyData.size);
         executable->ReadAt(
-		&(kernel->machine->mainMemory[phyAddr]),
+		&(kernel->machine->mainMemory[noffH.readonlyData.virtualAddr]),
 			noffH.readonlyData.size, noffH.readonlyData.inFileAddr);
     }
 #endif

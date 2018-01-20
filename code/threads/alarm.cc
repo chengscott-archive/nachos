@@ -49,8 +49,7 @@ Alarm::CallBack()
     Interrupt *interrupt = kernel->interrupt;
     MachineStatus status = interrupt->getStatus();
     
-    if (status != IdleMode &&
-        kernel->currentThread->getPriority() < 50) {
-        interrupt->YieldOnReturn();
+    if (status != IdleMode) {
+	interrupt->YieldOnReturn();
     }
 }

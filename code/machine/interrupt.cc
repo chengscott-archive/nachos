@@ -164,7 +164,6 @@ Interrupt::OneTick()
     ChangeLevel(IntOn, IntOff);	// first, turn off interrupts
 				// (interrupt handlers run with
 				// interrupts disabled)
-    kernel->scheduler->Aging();
     CheckIfDue(FALSE);		// check for pending interrupts
     ChangeLevel(IntOff, IntOn);	// re-enable interrupts
     if (yieldOnReturn) {	// if the timer device handler asked 
@@ -211,9 +210,9 @@ Interrupt::Idle()
     DEBUG(dbgInt, "Machine idling; checking for interrupts.");
     status = IdleMode;
     if (CheckIfDue(TRUE)) {	// check for any pending interrupts
-	status = SystemMode;
-	return;			// return in case there's now
-				// a runnable thread
+		status = SystemMode;
+		return;			// return in case there's now
+					// a runnable thread
     }
 
     // if there are no pending interrupts, and nothing is on the ready
@@ -222,8 +221,11 @@ Interrupt::Idle()
     // is not reached.  Instead, the halt must be invoked by the user program.
 
     DEBUG(dbgInt, "Machine idle.  No interrupts to do.");
+	// MP4 mod tag
+	/*
     cout << "No threads ready or runnable, and no pending interrupts.\n";
     cout << "Assuming the program completed.\n";
+	*/
     Halt();
 }
 
@@ -234,28 +236,35 @@ Interrupt::Idle()
 void
 Interrupt::Halt()
 {
+	// MP4 mod tag
+	/*
     cout << "Machine halting!\n\n";
     cout << "This is halt\n";
     kernel->stats->Print();
+	*/
+	delete debug;
+
     delete kernel;	// Never returns.
 }
 
-void
-Interrupt::PrintInt(int number)
-{
-    kernel->Print(number);
-}
-
+#ifdef FILESYS_STUB
 int
 Interrupt::CreateFile(char *filename)
 {
     return kernel->CreateFile(filename);
 }
+#endif
+
+int
+Interrupt::CreateFile(char *filename, int size)
+{
+    return kernel->CreateFile(filename, size);
+}
 
 OpenFileId
-Interrupt::OpenFile(char* filename)
+Interrupt::OpenFileName(char* filename)
 {
-    return kernel->OpenFile(filename);
+    return kernel->OpenFileName(filename);
 }
 
 int
@@ -389,10 +398,3 @@ Interrupt::DumpState()
     cout << "\nEnd of pending interrupts\n";
 }
 
-void
-Interrupt::Preempt()
-{
-    inHandler = TRUE;
-    YieldOnReturn();
-    inHandler = FALSE;
-}
