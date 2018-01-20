@@ -105,7 +105,27 @@ class Thread {
     
 	int getID() { return (ID); }
     void Print() { cout << name; }
+
+    static int cmpPriority(Thread *lhs, Thread *rhs) {
+        return rhs->getPriority() - lhs->getPriority();
+    }
+    static int cmpBurstTime(Thread *lhs, Thread *rhs) {
+        return lhs->getBurstTime() - rhs->getBurstTime();
+    }
+    int getPriority() const { return priority_; }
+    void setPriority(int rhs) { priority_ = rhs; }
+
+    int getBurstStart() const { return burstStart_; }
+    void setBurstStart(int rhs) { burstStart_ = rhs; }
+
+    int getBurstTime() const { return burstTime_; }
+    void setBurstTime(int rhs) { burstTime_ = rhs; }
+
+    int getWaitTime() const { return waitTime_; }
+    void setWaitTime(int rhs) { waitTime_ = rhs; }
+
     void SelfTest();		// test whether thread impl is working
+
 
   private:
     // some of the private data for this class is listed above
@@ -116,6 +136,7 @@ class Thread {
     ThreadStatus status;	// ready, running or blocked
     char* name;
 	int   ID;
+    int priority_, burstStart_, burstTime_, waitTime_;
     void StackAllocate(VoidFunctionPtr func, void *arg);
     				// Allocate a stack for thread.
 				// Used internally by Fork()

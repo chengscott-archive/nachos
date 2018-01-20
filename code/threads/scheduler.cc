@@ -31,7 +31,9 @@
 
 Scheduler::Scheduler()
 { 
-    readyList = new List<Thread *>; 
+    L1Q_ = new SortedList<Thread *>(Thread::cmpBurstTime);
+    L2Q_ = new SortedList<Thread *>(Thread::cmpPriority);
+    L3Q_ = new List<Thread *>;
     toBeDestroyed = NULL;
 } 
 
@@ -42,7 +44,9 @@ Scheduler::Scheduler()
 
 Scheduler::~Scheduler()
 { 
-    delete readyList; 
+    delete L1Q_;
+    delete L2Q_;
+    delete L3Q_;
 } 
 
 //----------------------------------------------------------------------
@@ -60,7 +64,40 @@ Scheduler::ReadyToRun (Thread *thread)
     DEBUG(dbgThread, "Putting thread on ready list: " << thread->getName());
 	//cout << "Putting thread on ready list: " << thread->getName() << endl ;
     thread->setStatus(READY);
-    readyList->Append(thread);
+
+    const int p = thread->getPriority(),
+        ticks = kernel->stats->totalTicks;
+    thread->setWaitTime(ticks);
+    if (p < 50) {
+        L3Q_->Append(thread);
+        printf("Tick %d: Thread %d is inserted into queue L%d\n",
+            ticks, thread->getID(), 3);
+    } else if (p < 100) {
+        L2Q_->Insert(thread);
+        printf("Tick %d: Thread %d is inserted into queue L%d\n",
+            ticks, thread->getID(), 2);
+        // L2
+        if (p > kernel->currentThread->getPriority()
+          && kernel->currentThread->getID() != 0)
+            kernel->interrupt->Preempt();
+    } else {
+        L1Q_->Insert(thread);
+        printf("Tick %d: Thread %d is inserted into queue L%d\n",
+            ticks, thread->getID(), 1);
+        int ti = 0.5 * kernel->currentThread->getBurstTime() +
+          0.5 * (ticks - kernel->currentThread->getBurstStart());
+        printf("[ReadyToRun] appoximated burst time (%d,%d)=(%d,%d)\n",
+            kernel->currentThread->getID(), thread->getID(),
+            ti, thread->getBurstTime());
+        if (thread->getID() != kernel->currentThread->getID()
+          && kernel->currentThread->getID() != 0) {
+            if (kernel->currentThread->getPriority() >= 100) {
+                if (thread->getBurstTime() < ti)
+                    kernel->interrupt->Preempt(); // L1
+            } else
+                kernel->interrupt->Preempt(); // L2
+        }
+    }
 }
 
 //----------------------------------------------------------------------
@@ -75,12 +112,18 @@ Thread *
 Scheduler::FindNextToRun ()
 {
     ASSERT(kernel->interrupt->getLevel() == IntOff);
-
-    if (readyList->IsEmpty()) {
-		return NULL;
-    } else {
-    	return readyList->RemoveFront();
-    }
+    Thread *ret = NULL;
+    int level;
+    if (!L1Q_->IsEmpty())
+        ret = L1Q_->RemoveFront(), level = 1;
+    else if (!L2Q_->IsEmpty())
+        ret = L2Q_->RemoveFront(), level = 2;
+    else if (!L3Q_->IsEmpty())
+        ret = L3Q_->RemoveFront(), level = 3;
+    if (ret != NULL)
+        printf("Tick %d: Thread %d is removed from queue L%d\n",
+            kernel->stats->totalTicks, ret->getID(), level);
+    return ret;
 }
 
 //----------------------------------------------------------------------
@@ -106,6 +149,8 @@ Scheduler::Run (Thread *nextThread, bool finishing)
     Thread *oldThread = kernel->currentThread;
     
     ASSERT(kernel->interrupt->getLevel() == IntOff);
+    if (oldThread->getID() == nextThread->getID())
+        return;
 
     if (finishing) {	// mark that we need to delete current thread
          ASSERT(toBeDestroyed == NULL);
@@ -122,7 +167,18 @@ Scheduler::Run (Thread *nextThread, bool finishing)
 
     kernel->currentThread = nextThread;  // switch to the next thread
     nextThread->setStatus(RUNNING);      // nextThread is now running
-    
+
+    // Update oldThread Ticks
+    const int ticks = kernel->stats->totalTicks,
+        duration = ticks - oldThread->getBurstStart(),
+        ti = (oldThread->getBurstTime() + duration) * 0.5;
+    kernel->currentThread->setBurstStart(ticks);
+    printf("Tick %d: Thread %d is now selected for execution\n",
+        ticks, nextThread->getID());
+    oldThread->setBurstTime(ti);
+    printf("Tick %d: Thread %d is replaced, and it has executed %d ticks\n",
+        ticks, oldThread->getID(), duration);
+
     DEBUG(dbgThread, "Switching from: " << oldThread->getName() << " to: " << nextThread->getName());
     
     // This is a machine-dependent assembly language routine defined 
@@ -174,6 +230,53 @@ Scheduler::CheckToBeDestroyed()
 void
 Scheduler::Print()
 {
-    cout << "Ready list contents:\n";
-    readyList->Apply(ThreadPrint);
+    cout << "L1 Queue contents:\n";
+    L1Q_->Apply(ThreadPrint);
+    cout << "L2 Queue contents:\n";
+    L2Q_->Apply(ThreadPrint);
+    cout << "L3 Queue contents:\n";
+    L3Q_->Apply(ThreadPrint);
+}
+
+void
+Scheduler::Aging()
+{
+    ListIterator<Thread *> *it1 = new ListIterator<Thread *>(L1Q_),
+        *it2 = new ListIterator<Thread *>(L2Q_);
+    Thread *thread;
+    const int ticks = kernel->stats->totalTicks;
+    int priority, new_priority;
+    while (!it1->IsDone()) {
+        thread = it1->Item();
+        if (ticks - thread->getWaitTime() > 1500) {
+            //L1Q_->Remove(thread);
+            priority = thread->getPriority();
+            new_priority = min(priority + 10, 149);
+            thread->setPriority(new_priority);
+            thread->setWaitTime(ticks);
+            if (priority < 149)
+                printf("Tick %d: Thread %d changes its priority from %d to %d\n",
+                    ticks, thread->getID(), priority, new_priority);
+            //printf("wtf Tick %d: Thread %d is removed from queue L%d\n",
+            //    ticks, thread->getID(), 1);
+            //ReadyToRun(thread);
+        }
+        it1->Next();
+    }
+    while (!it2->IsDone()) {
+        thread = it2->Item();
+        if (ticks - thread->getWaitTime() > 1500) {
+            L2Q_->Remove(thread);
+            priority = thread->getPriority();
+            new_priority = min(priority + 10, 149);
+            thread->setPriority(new_priority);
+            thread->setWaitTime(ticks);
+            printf("Tick %d: Thread %d changes its priority from %d to %d\n",
+                ticks, thread->getID(), priority, new_priority);
+            printf("test Tick %d: Thread %d is removed from queue L%d\n",
+                ticks, thread->getID(), 2);
+            ReadyToRun(thread);
+        }
+        it2->Next();
+    }
 }

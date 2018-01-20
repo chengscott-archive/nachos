@@ -164,6 +164,7 @@ Interrupt::OneTick()
     ChangeLevel(IntOn, IntOff);	// first, turn off interrupts
 				// (interrupt handlers run with
 				// interrupts disabled)
+    kernel->scheduler->Aging();
     CheckIfDue(FALSE);		// check for pending interrupts
     ChangeLevel(IntOff, IntOn);	// re-enable interrupts
     if (yieldOnReturn) {	// if the timer device handler asked 
@@ -388,3 +389,10 @@ Interrupt::DumpState()
     cout << "\nEnd of pending interrupts\n";
 }
 
+void
+Interrupt::Preempt()
+{
+    inHandler = TRUE;
+    YieldOnReturn();
+    inHandler = FALSE;
+}

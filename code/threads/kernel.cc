@@ -48,6 +48,9 @@ Kernel::Kernel(int argc, char **argv)
 		} else if (strcmp(argv[i], "-e") == 0) {
         	execfile[++execfileNum]= argv[++i];
 			cout << execfile[execfileNum] << "\n";
+        } else if (strcmp(argv[i], "-ep") == 0) {
+            execfile[++execfileNum] = argv[++i];
+            priority_[execfileNum] = atoi(argv[++i]);
 		} else if (strcmp(argv[i], "-ci") == 0) {
 	    	ASSERT(i + 1 < argc);
 	    	consoleIn = argv[i + 1];
@@ -111,7 +114,7 @@ Kernel::Initialize()
 #else
     fileSystem = new FileSystem(formatFlag);
 #endif // FILESYS_STUB
-    postOfficeIn = new PostOfficeInput(10);
+    //postOfficeIn = new PostOfficeInput(10);
     postOfficeOut = new PostOfficeOutput(reliability);
 
     interrupt->Enable();
@@ -271,8 +274,9 @@ void Kernel::ExecAll()
 int Kernel::Exec(char* name)
 {
 	t[threadNum] = new Thread(name, threadNum);
+    t[threadNum]->setPriority(priority_[threadNum]);
 	t[threadNum]->space = new AddrSpace();
-	t[threadNum]->Fork((VoidFunctionPtr) &ForkExecute, (void *)t[threadNum]);
+	t[threadNum]->Fork((VoidFunctionPtr) &ForkExecute, (void *)t[threadNum]);//forkexecute 251行
 	threadNum++;
 
 	return threadNum-1;
@@ -320,11 +324,13 @@ OpenFileId Kernel::OpenFile(char* filename)
 
 int Kernel::WriteFile(char *buffer, int size, OpenFileId id)
 {
+    if (id < 0 || id >= 20 || fileSystem->fileDescriptorTable[id] == NULL) return -1;
     return fileSystem->fileDescriptorTable[id]->Write(buffer, size);
 }
 
 int Kernel::ReadFile(char *buffer, int size, OpenFileId id)
 {
+    if (id < 0 || id >= 20 || fileSystem->fileDescriptorTable[id] == NULL) return -1;
     return fileSystem->fileDescriptorTable[id]->Read(buffer, size);
 }
 

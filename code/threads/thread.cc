@@ -46,6 +46,10 @@ Thread::Thread(char* threadName, int threadID)
 					// of machine registers
     }
     space = NULL;
+    priority_ = 0;
+    burstStart_ = 0;
+    burstTime_ = 0;
+    waitTime_ = 0;
 }
 
 //----------------------------------------------------------------------
